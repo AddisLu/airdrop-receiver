@@ -201,3 +201,7 @@ iPhone 也安裝 Tailscale，然後在設定頁點 Tailscale 那一行的位址�
 | GET | `/api/health` | 健康檢查 |
 
 除了 `/api/info` 和 `/api/health` 之外，所有 API 都需要 Token，可以放在 `X-Token` 標頭或 `?token=` 參數中。
+
+## 授權
+
+[MIT](LICENSE)。內含的第三方程式庫 qrcodejs 也是 MIT 授權，詳見 [vendor/README.md](vendor/README.md)。
