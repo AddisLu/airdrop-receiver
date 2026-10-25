@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>傳到電腦</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="傳到電腦">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#F4F5F7">
+<style>
+  :root {
+    --bg: #F4F5F7; --card: #FFFFFF; --fg: #15171C; --muted: #5B6170; --soft: #3B404B;
+    --line: #ECEEF1; --border: #DADDE3; --field: #FAFBFC;
+    --accent: #1F5EFF; --accent-ink: #1747C2; --accent-soft: #E8EEFF;
+    --ok: #1E7F4C; --ok-dot: #1E9E5A; --ok-soft: #E3F4EA; --ok-ink: #17663D; --err: #C62828;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0F1013; --card: #1B1D22; --fg: #F2F3F5; --muted: #9AA0AD; --soft: #C3C7D0;
+      --line: #2A2D34; --border: #3A3E47; --field: #23262C;
+      --accent: #5B8BFF; --accent-ink: #8EAEFF; --accent-soft: #1E2A4A;
+      --ok: #4CC184; --ok-dot: #3DBB78; --ok-soft: #173326; --ok-ink: #7FD8A8; --err: #FF6B6B;
+    }
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.5 -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", "Segoe UI", sans-serif; -webkit-text-size-adjust: 100%; }
+  h1 { margin: 0; font-size: 22px; font-weight: 700; line-height: 1.2; }
+  h2 { margin: 0; font-size: 18px; }
+  button { font: inherit; cursor: pointer; }
+  .mono { font-family: ui-monospace, Consolas, "SF Mono", monospace; }
+  .card { background: var(--card); border-radius: 20px; }
+  .muted { color: var(--muted); }
+  .dot { width: 8px; height: 8px; border-radius: 4px; background: var(--ok-dot); flex: none; }
+  .dot.off { background: var(--err); }
+
+  /* phone */
+  #phone { max-width: 480px; margin: 0 auto; min-height: 100vh; padding: calc(env(safe-area-inset-top) + 40px) 20px calc(env(safe-area-inset-bottom) + 28px); display: flex; flex-direction: column; gap: 20px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .status { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); }
+  .pick { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: var(--card); border: 1.5px dashed var(--border); border-radius: 20px; padding: 36px 20px; cursor: pointer; text-align: center; }
+  .pick.over { border-color: var(--accent); }
+  .pick .circle { width: 56px; height: 56px; border-radius: 28px; background: var(--accent-soft); display: flex; align-items: center; justify-content: center; }
+  .pick .title { font-size: 17px; font-weight: 700; color: var(--accent); }
+  .pick .hint { font-size: 13px; color: var(--muted); }
+  .textbox { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .textbox label { font-size: 14px; font-weight: 500; }
+  textarea { font: inherit; font-size: 16px; border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; resize: vertical; background: var(--field); color: var(--fg); min-height: 64px; }
+  .send { align-self: flex-end; min-height: 44px; padding: 0 22px; border: 0; border-radius: 22px; background: var(--fg); color: var(--bg); font-size: 15px; font-weight: 500; }
+  .send:disabled { opacity: .4; }
+  .list { display: flex; flex-direction: column; gap: 8px; }
+  .item { background: var(--card); border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+  .item .row { display: flex; justify-content: space-between; gap: 12px; font-size: 15px; }
+  .item .name { overflow-wrap: anywhere; }
+  .item .state { color: var(--muted); white-space: nowrap; }
+  .item.ok .state { color: var(--ok); font-weight: 500; }
+  .item.err .state { color: var(--err); font-weight: 500; }
+  .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+  .bar > div { height: 6px; width: 0; background: var(--accent); transition: width .15s; }
+  .item.ok .bar, .item.err .bar { display: none; }
+  .rowhead { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .inbox-item { display: flex; justify-content: space-between; gap: 12px; padding: 12px 0; border-top: 1px solid var(--line); color: var(--fg); text-decoration: none; font-size: 15px; }
+  .inbox-item .get { color: var(--accent); font-weight: 600; white-space: nowrap; }
+  .clipout { display: flex; flex-direction: column; gap: 10px; }
+  .clipout img { max-width: 100%; border-radius: 12px; border: 1px solid var(--border); }
+  .install { padding: 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .install h2 { font-size: 17px; }
+  .install p { margin: 0; font-size: 14px; }
+  .install ol { margin: 0; padding-left: 22px; font-size: 14px; line-height: 1.7; color: var(--soft); }
+  .primary { min-height: 48px; border: 0; border-radius: 24px; background: var(--accent); color: #FFFFFF; font-size: 16px; font-weight: 600; }
+  .shortcut summary { font-size: 13px; color: var(--muted); cursor: pointer; min-height: 24px; }
+  .shortcut input { width: 100%; margin-top: 10px; font-size: 13px; border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--field); color: var(--fg); }
+  .shortcut .send { margin-top: 10px; display: block; margin-left: auto; }
+  .foot { margin-top: auto; text-align: center; font-size: 12px; color: var(--muted); }
+
+  /* desktop */
+  #desk { max-width: 1040px; margin: 0 auto; padding: 40px 24px; display: flex; flex-direction: column; gap: 24px; }
+  .head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; }
+  .head h1 { font-size: 26px; }
+  .pill { display: flex; align-items: center; gap: 8px; background: var(--ok-soft); color: var(--ok-ink); border-radius: 20px; padding: 8px 14px; font-size: 14px; font-weight: 500; }
+  .pill.off { background: #FDECEC; color: #9B1C1C; }
+  .cols { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+  .connect { flex: 1 1 340px; padding: 24px; display: flex; flex-direction: column; gap: 18px; }
+  .qrrow { display: flex; flex-wrap: wrap; gap: 20px; align-items: center; }
+  #qr { width: 184px; height: 184px; padding: 8px; border-radius: 12px; background: #FFFFFF; border: 1px solid var(--border); flex: none; }
+  #qr img, #qr canvas { display: block; width: 166px !important; height: 166px !important; }
+  .kv { display: flex; justify-content: space-between; align-items: center; gap: 12px; font-size: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+  .addr { border: 0; background: none; padding: 0; color: inherit; text-align: right; }
+  .addr.sel { color: var(--accent); font-weight: 600; }
+  .small-btn { min-height: 32px; padding: 0 12px; border: 1px solid var(--border); border-radius: 16px; background: var(--card); color: var(--fg); font-size: 13px; }
+  .recent { flex: 999 1 480px; min-width: 0; padding: 24px; display: flex; flex-direction: column; }
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) 90px 110px; gap: 12px; padding: 10px 4px; border-top: 1px solid var(--line); font-size: 15px; }
+  .grid.headrow { border-top: 0; font-size: 13px; color: var(--muted); padding-bottom: 6px; }
+  .grid .name { overflow-wrap: anywhere; }
+  .grid .text { color: var(--soft); white-space: pre-wrap; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .empty { padding: 24px 4px; color: var(--muted); font-size: 14px; border-top: 1px solid var(--line); }
+  @media (max-width: 560px) { .grid { grid-template-columns: minmax(0, 1fr) 80px; } .grid .when { display: none; } }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position: absolute" aria-hidden="true">
+  <symbol id="logo" viewBox="0 0 512 512"><rect width="512" height="512" rx="112" fill="#1F5EFF"></rect><path d="M256 112v184M184 228l72 72 72-72M128 284v68a28 28 0 0 0 28 28h200a28 28 0 0 0 28-28v-68" fill="none" stroke="#fff" stroke-width="40" stroke-linecap="round" stroke-linejoin="round"></path></symbol>
+</svg>
+
+<!-- iPhone / other devices -->
+<main id="phone" hidden>
+  <div class="brand">
+    <svg width="44" height="44" role="img" aria-label="傳到電腦"><use href="#logo"></use></svg>
+    <div>
+      <h1>傳到電腦</h1>
+      <div class="status"><span class="dot off" id="pdot"></span><span id="pstatus">連線中…</span></div>
+    </div>
+  </div>
+
+  <label class="pick" id="pick">
+    <span class="circle"><svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" style="color: var(--accent)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"></path></svg></span>
+    <span class="title">選擇照片或檔案</span>
+    <span class="hint">任何類型、任何大小，可一次多選</span>
+    <input type="file" id="files" multiple hidden>
+  </label>
+
+  <div class="card textbox">
+    <label for="txt">傳送文字或連結</label>
+    <textarea id="txt" rows="2" placeholder="連結會直接在電腦打開，文字會複製到剪貼簿"></textarea>
+    <button class="send" id="sendText" disabled>送出</button>
+  </div>
+
+  <section class="card textbox" id="inboxCard">
+    <div class="rowhead"><h2>從電腦接收</h2><button class="small-btn" id="refreshInbox">重新整理</button></div>
+    <div class="list" id="inbox"><div class="muted" style="font-size: 14px">載入中…</div></div>
+  </section>
+
+  <section class="card textbox">
+    <h2>電腦的剪貼簿</h2>
+    <button class="send" id="getClip" style="align-self: flex-start">拿電腦的剪貼簿</button>
+    <div id="clipOut" class="clipout" hidden>
+      <textarea id="clipText" rows="3" readonly hidden></textarea>
+      <img id="clipImg" alt="電腦剪貼簿的圖片（長按可儲存或拷貝）" hidden>
+      <button class="small-btn" id="copyClip" hidden>複製</button>
+    </div>
+  </section>
+
+  <div class="list" id="plistWrap" hidden>
+    <div class="muted" style="font-size: 13px; padding: 0 4px">這次傳送</div>
+    <div class="list" id="plist"></div>
+  </div>
+
+  <section class="card install" id="ntfyCard" hidden>
+    <h2>電腦傳檔時一鍵接收（ntfy）</h2>
+    <p class="muted">電腦傳檔案給你時 ntfy 會跳通知，點一下就自動下載：照片進「照片」，其他檔案進「檔案」App 的「捷徑」資料夾。</p>
+    <ol>
+      <li>按「複製主題」，打開 ntfy App →「＋」→ 長按貼上 →「訂閱」</li>
+      <li>按「安裝接收捷徑」→「加入捷徑」（不用貼任何東西，名稱請保持「從電腦接收」）</li>
+    </ol>
+    <input class="mono" id="ntfyTopic" readonly style="font-size: 13px; border: 1px solid var(--border); border-radius: 10px; padding: 10px; background: var(--field); color: var(--fg)">
+    <button class="primary" id="copyTopic">複製主題</button>
+    <button class="primary" id="installReceive" style="background: var(--fg); color: var(--bg)">安裝接收捷徑</button>
+  </section>
+
+  <section class="card install">
+    <h2>加到分享選單</h2>
+    <p class="muted">裝好後，在相簿、LINE、Safari、檔案等任何 App 點「分享 → 傳到電腦」，就像 AirDrop：檔案進「下載」，連結直接在電腦打開。</p>
+    <ol>
+      <li>按下方按鈕（會自動複製你的上傳網址）</li>
+      <li>點「加入捷徑」</li>
+      <li>在詢問網址的欄位<b>長按 → 貼上</b>，完成</li>
+    </ol>
+    <button class="primary" id="installShortcut">安裝捷徑</button>
+    <details class="shortcut">
+      <summary>手動複製網址</summary>
+      <input class="mono" id="shortcutUrl" readonly>
+      <button class="send" id="copyShortcut">複製網址</button>
+    </details>
+  </section>
+
+  <div class="foot">檔案會存到電腦的「下載」資料夾 · <span id="pver"></span></div>
+</main>
+
+<!-- PC (localhost) -->
+<main id="desk" hidden>
+  <div class="head">
+    <div class="brand" style="gap: 14px">
+      <svg width="48" height="48" role="img" aria-label="傳到電腦"><use href="#logo"></use></svg>
+      <div>
+        <h1>傳到電腦 <span class="muted mono" id="dver" style="font-size: 15px; font-weight: 500"></span></h1>
+        <div class="muted" style="font-size: 14px">開機自動啟動 · 存到 <span id="saveDir"></span></div>
+      </div>
+    </div>
+    <div class="pill" id="dpill"><span class="dot" id="ddot"></span><span id="dstatus">接收中</span></div>
+  </div>
+
+  <div class="cols">
+    <section class="card connect">
+      <h2>用 iPhone 連線</h2>
+      <div class="qrrow">
+        <div id="qr"></div>
+        <div style="flex: 1 1 140px; font-size: 14px; line-height: 1.6; color: var(--soft)">用 iPhone 相機掃描，開啟上傳頁面，<br>再按「安裝捷徑」就能從任何 App 的分享選單傳到這台電腦。</div>
+      </div>
+      <div id="addrs" style="display: flex; flex-direction: column; gap: 10px"></div>
+      <div class="kv">
+        <span class="muted">Token</span>
+        <span style="display: flex; align-items: center; gap: 8px"><span class="mono" id="token"></span><button class="small-btn" id="copyToken">複製</button></span>
+      </div>
+      <div class="kv" style="align-items: flex-start">
+        <span class="muted">版本</span>
+        <div id="versions" style="display: flex; flex-direction: column; gap: 4px; text-align: right; font-size: 13px"></div>
+      </div>
+      <div class="kv">
+        <span class="muted">ntfy 主題</span>
+        <span style="display: flex; align-items: center; gap: 8px"><span class="mono" id="dtopic" style="font-size: 12px"></span><button class="small-btn" id="copyTopicPc">複製</button></span>
+      </div>
+      <div class="kv">
+        <span class="muted">捷徑上傳網址</span>
+        <span style="display: flex; align-items: center; gap: 8px"><button class="small-btn" id="copyUpload">複製</button></span>
+      </div>
+    </section>
+
+    <section class="card connect">
+      <h2>傳到 iPhone</h2>
+      <label class="pick" id="dpick" style="padding: 24px 16px">
+        <span class="title">選擇或拖放檔案</span>
+        <span class="hint">也可以在檔案總管按右鍵 →「傳送到」→「iPhone（傳到電腦）」</span>
+        <input type="file" id="dfiles" multiple hidden>
+      </label>
+      <div class="muted" style="font-size: 13px">接著在 iPhone 執行「傳到電腦」→「從電腦接收檔案」，或打開手機上的網頁。</div>
+      <div id="outbox"></div>
+      <div class="muted" id="trayWarn" style="font-size: 13px; color: var(--err)" hidden>系統匣的「傳到電腦」沒有在執行，剪貼簿功能暫時無法使用。</div>
+    </section>
+
+    <section class="card recent">
+      <h2 style="margin-bottom: 14px">最近收到</h2>
+      <div class="grid headrow"><span>檔案</span><span>大小</span><span class="when">時間</span></div>
+      <div id="recent"></div>
+    </section>
+  </div>
+</main>
+
+<script src="/qrcode.min.js"></script>
+<script>
+  const $ = id => document.getElementById(id);
+  // ?phone shows the upload view on the PC too (handy for testing).
+  const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname) && !new URLSearchParams(location.search).has('phone');
+
+  function fmtSize(n) {
+    if (n == null) return '';
+    if (n < 1024) return n + ' B';
+    if (n < 1048576) return Math.round(n / 1024) + ' KB';
+    if (n < 1073741824) return (n / 1048576).toFixed(1) + ' MB';
+    return (n / 1073741824).toFixed(2) + ' GB';
+  }
+  function fmtTime(iso) {
+    const d = new Date(iso), now = new Date();
+    const hm = d.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return d.toDateString() === now.toDateString() ? '今天 ' + hm : (d.getMonth() + 1) + '/' + d.getDate() + ' ' + hm;
+  }
+  // navigator.clipboard only exists on https/localhost; plain-http Safari needs execCommand.
+  function copyText(text, btn) {
+    const done = () => { const old = btn.textContent; btn.textContent = '已複製'; setTimeout(() => btn.textContent = old, 1500); };
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(text).then(done); return; }
+    // iOS Safari only copies from an editable element selected through a Range.
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.contentEditable = 'true'; ta.readOnly = false;
+    ta.style.position = 'fixed'; ta.style.top = '0'; ta.style.opacity = '0'; ta.style.fontSize = '16px';
+    document.body.append(ta);
+    const range = document.createRange();
+    range.selectNodeContents(ta);
+    const sel = window.getSelection();
+    sel.removeAllRanges(); sel.addRange(range);
+    ta.setSelectionRange(0, text.length);
+    try { if (document.execCommand('copy')) done(); } catch (e) {}
+    sel.removeAllRanges();
+    ta.remove();
+  }
+  function el(tag, cls, text) {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+
+  /* ---------- PC view ---------- */
+  function initDesk() {
+    $('desk').hidden = false;
+    let selected = null, qr = null, info = null;
+
+    function drawQr(url) {
+      $('qr').textContent = '';
+      if (window.QRCode) qr = new QRCode($('qr'), { text: url, width: 166, height: 166, correctLevel: QRCode.CorrectLevel.M });
+    }
+
+    function render() {
+      $('saveDir').textContent = info.saveDir;
+      $('token').textContent = info.token;
+      $('dtopic').textContent = info.ntfyTopic || '';
+      renderVersions();
+      const addrs = info.addresses || [];
+      if (!selected || !addrs.some(a => a.url === selected)) {
+        const lan = addrs.find(a => !/tailscale/i.test(a.label)) || addrs[0];
+        selected = lan ? lan.url : null;
+        if (selected) drawQr(selected);
+      }
+      const box = $('addrs');
+      box.textContent = '';
+      if (info.localOnly) box.append(el('div', 'kv', '尚未安裝：只有這台電腦連得到，請執行 install.ps1'));
+      for (const a of addrs) {
+        const row = el('div', 'kv');
+        row.append(el('span', 'muted', a.label));
+        const b = el('button', 'addr mono' + (a.url === selected ? ' sel' : ''), new URL(a.url).host);
+        b.title = '顯示這個網址的 QR Code';
+        b.onclick = () => { selected = a.url; drawQr(a.url); render(); };
+        row.append(b);
+        box.append(row);
+      }
+
+      const list = $('recent');
+      list.textContent = '';
+      const recent = info.recent || [];
+      if (!recent.length) list.append(el('div', 'empty', '還沒有收到任何東西。'));
+      for (const r of recent) {
+        const row = el('div', 'grid');
+        if (r.kind === 'text') {
+          row.append(el('span', 'text', r.text), el('span', 'muted', '文字'), el('span', 'muted when', fmtTime(r.time)));
+        } else if (r.kind === 'clip') {
+          row.append(el('span', 'name', 'iPhone 剪貼簿'), el('span', 'muted', r.image ? '圖片' : '文字'), el('span', 'muted when', fmtTime(r.time)));
+        } else if (r.kind === 'sent') {
+          row.append(el('span', 'name', '→ iPhone：' + r.name), el('span', 'muted', fmtSize(r.size)), el('span', 'muted when', fmtTime(r.time)));
+        } else {
+          row.append(el('span', 'name', r.name), el('span', 'muted', fmtSize(r.size)), el('span', 'muted when', fmtTime(r.time)));
+        }
+        list.append(row);
+      }
+    }
+
+    // Every part reports its own version; anything older than the PC service needs updating.
+    function renderVersions() {
+      const v = info.version;
+      $('dver').textContent = 'v' + v;
+      const box = $('versions');
+      box.textContent = '';
+      const row = (label, ver, when, howToUpdate) => {
+        const line = el('div');
+        const current = ver === v;
+        line.append(el('span', null, label + '：'));
+        const tag = el('span', 'mono', ver ? 'v' + ver : '未知');
+        tag.style.color = current ? 'var(--ok)' : 'var(--err)';
+        tag.style.fontWeight = '600';
+        line.append(tag);
+        if (when) line.append(el('span', 'muted', '（' + fmtTime(when) + ' 用過）'));
+        if (!current) line.append(el('span', 'muted', ' → ' + howToUpdate));
+        box.append(line);
+      };
+      const c = info.clients || {};
+      row('電腦服務', v, null, '');
+      row('系統匣程式', info.trayVersion, null, info.trayVersion ? '執行 安裝.cmd' : '沒有執行，執行 安裝.cmd');
+      row('iPhone「傳到電腦」', c.main && c.main.version, c.main && c.main.time, '舊版或還沒用過，從手機網頁重新安裝');
+      row('iPhone「從電腦接收」', c.recv && c.recv.version, c.recv && c.recv.time, '舊版或還沒用過，從手機網頁重新安裝');
+    }
+
+    function renderOutbox() {
+      const box = $('outbox');
+      box.textContent = '';
+      for (const o of (info.outbox || []).slice().reverse()) {
+        const row = el('div', 'kv');
+        row.append(el('span', 'name', o.name), el('span', 'muted', o.delivered ? 'iPhone 已接收' : '等待 iPhone 接收'));
+        box.append(row);
+      }
+      $('trayWarn').hidden = info.trayRunning !== false;
+    }
+
+    async function queueForIPhone(files) {
+      for (const f of files) {
+        await fetch('/api/outbox', { method: 'POST', headers: { 'X-Filename': encodeURIComponent(f.name) }, body: f });
+      }
+      refresh();
+    }
+    $('dfiles').addEventListener('change', e => { queueForIPhone([...e.target.files]); e.target.value = ''; });
+    const dpick = $('dpick');
+    dpick.addEventListener('dragover', e => { e.preventDefault(); dpick.classList.add('over'); });
+    dpick.addEventListener('dragleave', () => dpick.classList.remove('over'));
+    dpick.addEventListener('drop', e => { e.preventDefault(); dpick.classList.remove('over'); queueForIPhone([...e.dataTransfer.files]); });
+
+    function setStatus(ok) {
+      $('dpill').classList.toggle('off', !ok);
+      $('ddot').classList.toggle('off', !ok);
+      $('dstatus').textContent = ok ? '接收中' : '服務未執行';
+    }
+
+    async function refresh() {
+      try {
+        const res = await fetch('/api/info', { cache: 'no-store' });
+        info = await res.json();
+        setStatus(true);
+        render();
+        renderOutbox();
+      } catch (e) { setStatus(false); }
+    }
+
+    $('copyToken').onclick = e => info && copyText(info.token, e.target);
+    $('copyTopicPc').onclick = e => info && copyText(info.ntfyTopic, e.target);
+    $('copyUpload').onclick = e => {
+      if (!selected) return;
+      const u = new URL(selected); u.pathname = '/upload';
+      copyText(u.toString(), e.target);
+    };
+
+    refresh();
+    setInterval(refresh, 3000);
+  }
+
+  /* ---------- phone view ---------- */
+  function initPhone() {
+    $('phone').hidden = false;
+    let token = new URLSearchParams(location.search).get('token');
+    try {
+      if (token) localStorage.setItem('token', token);
+      else token = localStorage.getItem('token');
+    } catch (e) {}
+
+    function setStatus(ok, text) {
+      $('pdot').classList.toggle('off', !ok);
+      $('pstatus').textContent = text;
+    }
+
+    async function ping() {
+      if (!token) { setStatus(false, '缺少 Token，請重新掃描電腦上的 QR Code'); return false; }
+      try {
+        const res = await fetch('/api/ping', { headers: { 'X-Token': token }, cache: 'no-store' });
+        if (res.status === 401) { setStatus(false, 'Token 錯誤，請重新掃描 QR Code'); return false; }
+        const data = await res.json();
+        setStatus(true, data.name + ' · 已連線');
+        $('pver').textContent = '電腦版本 v' + data.version;
+        if (data.ntfyTopic) {
+          $('ntfyTopic').value = data.ntfyTopic;
+          $('ntfyCard').hidden = false;
+        }
+        return true;
+      } catch (e) { setStatus(false, '連不到電腦'); return false; }
+    }
+
+    function addItem(name) {
+      $('plistWrap').hidden = false;
+      const item = el('div', 'item');
+      const row = el('div', 'row');
+      const state = el('span', 'state', '等待中');
+      row.append(el('span', 'name', name), state);
+      const bar = el('div', 'bar'); const fill = el('div'); bar.append(fill);
+      item.append(row, bar);
+      $('plist').prepend(item);
+      return {
+        progress(p) { fill.style.width = Math.round(p * 100) + '%'; state.textContent = Math.round(p * 100) + '%'; },
+        done(ok, msg) { item.classList.add(ok ? 'ok' : 'err'); state.textContent = msg; }
+      };
+    }
+
+    function upload(file, ui) {
+      return new Promise(resolve => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/upload');
+        xhr.setRequestHeader('X-Token', token);
+        xhr.setRequestHeader('X-Filename', encodeURIComponent(file.name));
+        if (file.type) xhr.setRequestHeader('Content-Type', file.type);
+        xhr.upload.onprogress = e => { if (e.lengthComputable) ui.progress(e.loaded / e.total); };
+        xhr.onload = () => {
+          if (xhr.status === 200) ui.done(true, '完成 · ' + fmtSize(file.size));
+          else ui.done(false, xhr.status === 401 ? 'Token 錯誤' : '失敗 (' + xhr.status + ')');
+          resolve();
+        };
+        xhr.onerror = () => { ui.done(false, '連線失敗'); resolve(); };
+        xhr.send(file);
+      });
+    }
+
+    async function sendAll(files) {
+      const queue = files.map(f => [f, addItem(f.name)]);
+      for (const [f, ui] of queue) await upload(f, ui);
+    }
+
+    $('files').addEventListener('change', e => { sendAll([...e.target.files]); e.target.value = ''; });
+    const pick = $('pick');
+    pick.addEventListener('dragover', e => { e.preventDefault(); pick.classList.add('over'); });
+    pick.addEventListener('dragleave', () => pick.classList.remove('over'));
+    pick.addEventListener('drop', e => { e.preventDefault(); pick.classList.remove('over'); sendAll([...e.dataTransfer.files]); });
+
+    const txt = $('txt'), btn = $('sendText');
+    txt.addEventListener('input', () => btn.disabled = !txt.value.trim());
+    btn.addEventListener('click', async () => {
+      const text = txt.value.trim();
+      if (!text) return;
+      const ui = addItem(text.length > 40 ? text.slice(0, 40) + '…' : text);
+      btn.disabled = true;
+      try {
+        const res = await fetch('/text', { method: 'POST', headers: { 'X-Token': token, 'Content-Type': 'text/plain; charset=utf-8' }, body: text });
+        if (res.ok) { ui.done(true, /^https?:\/\/\S+$/i.test(text) ? '已在電腦開啟' : '已複製到電腦'); txt.value = ''; }
+        else ui.done(false, '失敗 (' + res.status + ')');
+      } catch (e) { ui.done(false, '連線失敗'); }
+      btn.disabled = !txt.value.trim();
+    });
+
+    // From the PC: files waiting in the outbox (tapping one downloads it).
+    async function loadInbox() {
+      const box = $('inbox');
+      try {
+        const res = await fetch('/?action=outbox&token=' + encodeURIComponent(token || ''), { cache: 'no-store' });
+        if (!res.ok) throw new Error(res.status);
+        const data = await res.json();
+        box.textContent = '';
+        if (!data.items.length) { box.append(el('div', 'muted', '電腦沒有要傳給你的檔案。')); box.firstChild.style.fontSize = '14px'; }
+        for (const it of data.items) {
+          const a = el('a', 'inbox-item');
+          a.href = it.url;
+          a.target = '_blank';
+          a.append(el('span', 'name', it.name + ' · ' + fmtSize(it.size)), el('span', 'get', '下載'));
+          a.addEventListener('click', () => setTimeout(loadInbox, 3000));
+          box.append(a);
+        }
+      } catch (e) { box.textContent = '無法讀取電腦的檔案清單'; }
+    }
+    $('refreshInbox').onclick = loadInbox;
+
+    // PC clipboard: the tray reads it only at this moment.
+    $('getClip').onclick = async () => {
+      const btn = $('getClip');
+      btn.disabled = true; btn.textContent = '讀取中…';
+      $('clipOut').hidden = false; $('clipText').hidden = true; $('clipImg').hidden = true; $('copyClip').hidden = true;
+      try {
+        const res = await fetch('/?action=clipboard&token=' + encodeURIComponent(token || ''), { cache: 'no-store' });
+        const type = res.headers.get('Content-Type') || '';
+        if (res.ok && type.startsWith('image/')) {
+          $('clipImg').src = URL.createObjectURL(await res.blob());
+          $('clipImg').hidden = false;
+        } else {
+          const text = await res.text();
+          $('clipText').value = res.ok ? (text || '（電腦剪貼簿是空的）') : text;
+          $('clipText').hidden = false;
+          $('copyClip').hidden = !res.ok || !text;
+        }
+      } catch (e) {
+        $('clipText').value = '連不到電腦';
+        $('clipText').hidden = false;
+      }
+      btn.disabled = false; btn.textContent = '拿電腦的剪貼簿';
+    };
+    $('copyClip').onclick = e => copyText($('clipText').value, e.target);
+
+    $('copyTopic').onclick = e => copyText($('ntfyTopic').value, e.target);
+    $('installReceive').onclick = () => { location.href = '/shortcut-receive'; };
+
+    loadInbox();
+    setInterval(() => { if (!document.hidden) loadInbox(); }, 8000);
+    // Opened from the ntfy notification's "用網頁下載" button.
+    if (new URLSearchParams(location.search).has('inbox')) $('inboxCard').scrollIntoView();
+
+    const shortcutUrl = location.origin + '/upload?token=' + encodeURIComponent(token || '');
+    $('shortcutUrl').value = shortcutUrl;
+    $('copyShortcut').onclick = e => copyText(shortcutUrl, e.target);
+    // The shortcut file is generic; the URL (with token) is pasted at import, so copy it first.
+    $('installShortcut').onclick = e => {
+      copyText(shortcutUrl, e.target);
+      e.target.textContent = '已複製網址，下載捷徑中…';
+      setTimeout(() => { location.href = '/shortcut'; }, 400);
+    };
+
+    ping();
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) ping(); });
+  }
+
+  isLocal ? initDesk() : initPhone();
+</script>
+</body>
+</html>
