@@ -130,16 +130,24 @@ $actions = @(
     (Flow 'choosefrommenu' 'menu' 2)
     (Flow 'conditional' 'has-input' 2)
 
-    # --- upload each item. Web links (Safari pages, URLs, "share link") go as a link the PC
-    # opens; everything else as a file. Decided by content: "as URL" starts with http only
-    # for web links (files coerce to file:// URLs).
+    # --- upload each item. Web links (URLs, Safari pages) go as a link the PC opens; everything
+    # else as a file. Decided by the item's type name (Get Type), never by coercing it: some
+    # shared files can't be converted to URL at all and the If then fails ("轉換錯誤").
+    # "URL" is the same in every language; Safari pages are "Safari 網頁" / "Safari web page".
+    # Text that is just a link is turned into a link by the server.
     (Flow 'repeat.each' 'upload-loop' 0 ([ordered]@{ WFInput = (Attach (VarRef '項目')) }))
-    (Flow 'conditional' 'is-link' 0 ([ordered]@{ WFCondition = 8; WFConditionalActionString = 'http'
-        WFInput = [ordered]@{ Type = 'Variable'; Variable = (Attach (VarRef 'Repeat Item' 'WFURLContentItem')) } }))
+    (Action 'getitemtype' (P 'item-type' ([ordered]@{ WFInput = (Attach (VarRef 'Repeat Item')) })))
+    (Flow 'conditional' 'is-url' 0 ([ordered]@{ WFCondition = 99; WFConditionalActionString = 'URL'
+        WFInput = [ordered]@{ Type = 'Variable'; Variable = (Attach (Out 'item-type' '類型')) } }))
     (Request 'send-link' '' @(, (TextField 'url' (VarRef 'Repeat Item' 'WFURLContentItem'))))
-    (Flow 'conditional' 'is-link' 1)
+    (Flow 'conditional' 'is-url' 1)
+    (Flow 'conditional' 'is-safari' 0 ([ordered]@{ WFCondition = 99; WFConditionalActionString = 'Safari'
+        WFInput = [ordered]@{ Type = 'Variable'; Variable = (Attach (Out 'item-type' '類型')) } }))
+    (Request 'send-page' '' @(, (TextField 'url' (VarRef 'Repeat Item' 'WFURLContentItem'))))
+    (Flow 'conditional' 'is-safari' 1)
     (Request 'send-file' '' @(, (FileField 'file' (VarRef 'Repeat Item'))) (VarRef 'Repeat Item'))
-    (Flow 'conditional' 'is-link' 2)
+    (Flow 'conditional' 'is-safari' 2)
+    (Flow 'conditional' 'is-url' 2)
     (Flow 'repeat.each' 'upload-loop' 2)
     (Notify 'upload-notify' (Plain '已傳送完成'))
 )
